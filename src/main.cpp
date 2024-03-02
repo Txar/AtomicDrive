@@ -1,7 +1,7 @@
 #include <iostream>
+#include "AtomicDrive/AtomicDrive.cpp"
 
 int main(){
-    std::cout << "Hello, world!\n";
-
-    return 0;
+    AtomicDrive atomicDrive;
+    return atomicDrive.mainLoop();
 }

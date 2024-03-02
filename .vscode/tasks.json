@@ -15,7 +15,7 @@
         {
             "label": "Build + run",
             "type": "shell",
-            "command": "mingw32-make && cd build/ProjectName && ProjectName",
+            "command": "mingw32-make && cd build/AtomicDrive && AtomicDrive",
             "options": {},
             "group": {
                 "kind": "build",
