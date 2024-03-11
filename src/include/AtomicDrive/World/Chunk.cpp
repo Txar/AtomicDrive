@@ -11,7 +11,9 @@ Chunk::Chunk() {
     for (int i = 0; i < CHUNK_SIZE; i++) {
         tiles[i] = new Tile[CHUNK_SIZE]();
         for (int j = 0; j < CHUNK_SIZE; j++) {
-            tiles[i][j] = Tile(grass);
+            if ((rand()*100) % 99 == 1) tiles[i][j] = Tile(Tile::types[Tile::SAND_ROCK]);
+            else tiles[i][j] = Tile(Tile::types[Tile::GRASS]);
+            //tiles[i][j] = Tile(grass);
         }
     }
 }
@@ -32,4 +34,10 @@ void Chunk::render() {
         }
     }
     drawBuffer.display();
+}
+
+void Chunk::unload() {
+    loaded = false;
+    drawBuffer.~RenderTexture();
+    delete &tiles;
 }

@@ -1,16 +1,25 @@
 #pragma once
 
-#include "AtomicDrive/Graphics/TextureRect.cpp"
+#include "AtomicDrive/Graphics/Button.hpp"
 
 class Tile {
     public:
         Tile();
         Tile(bool solid, float durability, float friction, TextureRect *textureRect);
         Tile(bool solid, float durability, float friction, TextureRect &textureRect);
-        void InitializeTypes();
+
+        enum TileTypes {
+            GRASS,
+            SAND,
+            DIRT,
+            SAND_ROCK,
+            DIRT_ROCK
+        };
+
+        static Tile *types;
+        static void initializeTypes();
 
         static const int TILE_SIZE = 16;
-        static const Tile *types;
 
         bool isSolid;
         float durability;

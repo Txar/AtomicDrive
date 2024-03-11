@@ -4,7 +4,10 @@
 
 class Effect {
     public:
-        sf::Vector2f force;
         float damage;
         int ticks;
+        sf::Vector2f force;
+
+        Effect() {};
+        Effect(float damage, int ticks, sf::Vector2f force) : damage(damage), ticks(ticks), force(force) {};
 };

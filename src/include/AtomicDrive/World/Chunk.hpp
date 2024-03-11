@@ -12,6 +12,9 @@ class Chunk {
         Tile **tiles;
         Chunk();
 
+        bool loaded;
+
         Tile &at(int x, int y);
         void render();
+        void unload();
 };

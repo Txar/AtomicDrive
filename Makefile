@@ -17,6 +17,7 @@ ifeq ($(OS),Windows_NT)
 	mkdir assets && \
 	mkdir data
 	@echo "Copying assets..."
+	-copy .\src\sounds\* build\${BN}\assets
 	-copy .\src\sprites\export\* build\$(BN)\assets
 	-copy .\src\fonts\* build\$(BN)\assets
 	-copy .\src\dlls\* build\$(BN)

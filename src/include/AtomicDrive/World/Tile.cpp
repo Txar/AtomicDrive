@@ -1,7 +1,10 @@
 #include "Tile.hpp"
 
-void Tile::InitializeTypes() {
+Tile *Tile::types = new Tile[sizeof(Tile::TileTypes)]();
 
+void Tile::initializeTypes() {
+    types[GRASS] = Tile(false, 0, 1.0, TextureRect::types[TextureRect::GRASS]);
+    types[SAND_ROCK] = Tile(true, 0, 1.0, TextureRect::types[TextureRect::SAND_ROCK]);
 }
 
 Tile::Tile() {}
