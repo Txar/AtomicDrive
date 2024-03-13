@@ -60,14 +60,34 @@ void World::draw(sf::RenderTexture *r, sf::Vector2i &camera) {
                 break;
             }
             case (CAR): {
+                if (e.isDead) break;
                 sf::Sprite &s = e.sprite->sprite;
                 //if (e.controller == PLAYER_CAR) s.setPosition(e.x - camera.x, e.y - camera.y);
-                s.setPosition(e.x - camera.x, e.y - camera.y);
+                int posX = e.x - camera.x;
+                int posY = e.y - camera.y;
+                s.setPosition(posX, posY);
                 //if (e.controller == AI_CAR) std::cout << e.x - camera.x << " " << e.y - camera.y << "\n";
                 s.setOrigin(16.0, 24.0);
                 s.setRotation(e.rotation);
                 //if (e.x - camera.x > 0 && e.y - camera.y > 0) {
                 r->draw(s);
+
+                if (e.controller == ENTITY_CONTROLLER::PLAYER_CAR) {
+                    sf::Sprite &s = TextureRect::types[TextureRect::TARGET_ARROW].sprite;
+                    s.setPosition(posX, posY);
+                    s.setOrigin(16.0, 64.0 + 24.0);
+                    float rotation = 180 - (atan2(targetX - e.x + 16, targetY - e.y + 24)*180/Math::PI);
+                    s.setRotation(rotation);
+                    r->draw(s);
+
+                    if (e.ivars[Player::ENGINE_LEVEL > 0]) {
+                        sf::Sprite &s = TextureRect::types[TextureRect::ENGINE_UPGRADE].sprite;
+                        s.setPosition(posX, posY);
+                        s.setOrigin(16.0, 24.0);
+                        s.setRotation(e.rotation);
+                        r->draw(s);
+                    }
+                }
 
                 /*
                 for (Collider &ec : e.colliders) {

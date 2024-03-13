@@ -2,7 +2,7 @@
 #include <math.h>
 
 void AtomicDrive::drawUI() {
-    
+    ui.draw(worldBuffer);
 }
 
 void AtomicDrive::AffectEntity(Entity &e, Effect effect) {
@@ -30,6 +30,7 @@ Collider::CollisionType AtomicDrive::checkCarCollisions(Entity &e, World &world)
     }
 
     for (Entity &en : world.entities) {
+        if (en.isDead) continue;
         if (en.id == e.id) continue;
         for (Collider &ec : e.colliders) {
             sf::Vector2i p = Math::iRotateAroundOrigin(ec.x + ec.width/2, ec.y + ec.height/2, e.rotation*Math::DEG_TO_RAD);
@@ -39,10 +40,17 @@ Collider::CollisionType AtomicDrive::checkCarCollisions(Entity &e, World &world)
                 sf::Vector2i p = Math::iRotateAroundOrigin(ec2.x + ec2.width/2, ec2.y + ec2.height/2, en.rotation*Math::DEG_TO_RAD);
                 Collider c2(en.x + p.x - ec.width/2, en.y + p.y - ec.height/2, ec.width, ec.height);
                 if (c2.collide(c)) {
-                    AffectEntity(en, Effect(0, 0, sf::Vector2f(e.velocity.x/2, e.velocity.y/2)));
+                    float speed = (abs(e.velocity.x) + abs(e.velocity.y));
+                    if (!(e.controller == PLAYER_CAR && e.ivars[Player::IS_ABERRATING])) {
+                        float damage = speed*speed/10.0;
+                        AffectEntity(en, Effect(damage, 0, sf::Vector2f(e.velocity.x/2, e.velocity.y/2)));
+                        if (e.controller == PLAYER_CAR) {
+                            screwsOwned += (int)damage;
+                        }
+                    }
                     collision = Collider::CollisionType::CAR_ENTITY;
                     if (abs(e.velocity.x) + abs(e.velocity.y) > 1) {
-                        float volume = (abs(e.velocity.x) + abs(e.velocity.y)) / 4.0; // 1.5;
+                        float volume = speed / 4.0; // 1.5;
                         volume = volume*volume;
                         e.soundManager.playSound(soundManager.car_crash, volume, e.x, e.y);
                     }
@@ -69,6 +77,8 @@ void AtomicDrive::calculateCarPhysics(Entity &e, float turning, sf::Vector2f acc
 
     float maxSpeed = 6;
     if (e.controller == ENTITY_CONTROLLER::AI_CAR) maxSpeed = 8.0;
+    if (e.controller == ENTITY_CONTROLLER::PLAYER_CAR 
+    && e.ivars[Player::ENGINE_LEVEL] > 0) maxSpeed = 8.0;
 
     if (e.velocity.x >  maxSpeed) e.velocity.x =  maxSpeed;
     if (e.velocity.y >  maxSpeed) e.velocity.y =  maxSpeed;
@@ -102,16 +112,34 @@ void AtomicDrive::calculateCarPhysics(Entity &e, float turning, sf::Vector2f acc
 
     std::vector<Effect> newEffects;
     for (int i = 0; i < (int)e.effects.size(); i++) {
-        Effect &ef = e.effects.at(0);
+        Effect &ef = e.effects.at(i);
         if (ef.ticks-- > 0) {
             newEffects.push_back(ef);
         }
-        e.velocity += ef.force;
+        if (e.controller == ENTITY_CONTROLLER::PLAYER_CAR) {
+            e.velocity += ef.force;
+            if (ef.isAberrating) {
+                e.ivars[Player::IS_ABERRATING] = true;
+            }
+            else {
+                if (ef.damage != 0) {
+                    e.health -= ef.damage;
+                    screenShakeFrames += ef.damage*2;
+                }
+            }
+        }
+        else {
+            e.velocity += ef.force;
+            e.health -= ef.damage;
+        }
     }
     e.effects = newEffects;
 
     Collider::CollisionType collision = checkCarCollisions(e, world);
-    if (collision != Collider::NONE) {
+    if (collision == Collider::NONE || (e.controller == PLAYER_CAR && e.ivars[Player::IS_ABERRATING])) {
+        //no collision
+    }
+    else {
         e.x = prevX;
         e.y = prevY;
         e.rotation = prevRotation;
@@ -120,18 +148,20 @@ void AtomicDrive::calculateCarPhysics(Entity &e, float turning, sf::Vector2f acc
             //e.velocity = {0, 0};
         }
         else {
-            if (abs(e.velocity.x) + abs(e.velocity.y) > 1) {
-                float volume = (abs(e.velocity.x) + abs(e.velocity.y))/4.0;
+            float speed = abs(e.velocity.x) + abs(e.velocity.y);
+            if (speed > 1) {
+                float volume = speed/4.0;
                 volume = volume*volume;
                 e.soundManager.playSound(soundManager.car_crash, volume, e.x, e.y);
             }
+            AffectEntity(e, Effect(speed*speed/10, 0, {0.0, 0.0}));
             e.velocity = {e.velocity.x/2, e.velocity.y/2};
             //e.velocity = {0, 0};
         }
     }
 }
 
-AtomicDrive::AtomicDrive() : world() {
+AtomicDrive::AtomicDrive() : ui(), world() {
     fps = 60;
     frame = 0;
 
@@ -154,12 +184,17 @@ AtomicDrive::AtomicDrive() : world() {
     carEntity.controller = ENTITY_CONTROLLER::PLAYER_CAR;
     carEntity.sprite = &TextureRect::types[TextureRect::BLUE_CAR_BASE];
     carEntity.renderer = CAR;
-    carEntity.ivars = new int[5];
+    carEntity.maxHealth = 100.0;
+    carEntity.health = 100.0;
+    carEntity.ivars = new int[7];
     carEntity.ivars[0] = 0;
     carEntity.ivars[1] = 0;
-    carEntity.ivars[2] = 0;
+    carEntity.ivars[Player::ENGINE_LEVEL] = 1;
     carEntity.ivars[Player::ENGINE_SOUND_TICKS] = 0;
-    carEntity.ivars[Player::IS_BEING_DRIVEN] = 0;
+    carEntity.ivars[Player::IS_BEING_DRIVEN] = 1;
+    carEntity.ivars[Player::ABER_CORE_LEVEL] = 3;
+    carEntity.ivars[Player::IS_ABERRATING] = 0;
+    //std::cout << Player::ENGINE_SOUND_TICKS << std::endl;
 
     carEntity.colliders.push_back(Collider(-8, 4, 16, 16));
     carEntity.colliders.push_back(Collider(-8, -8, 16, 16));
@@ -169,19 +204,35 @@ AtomicDrive::AtomicDrive() : world() {
 
     Entity::incrementId++;
     carEntity.id++;
-
-    carEntity.controller = ENTITY_CONTROLLER::AI_CAR;
-    delete carEntity.ivars;
-    carEntity.ivars = new int[6];
-    carEntity.ivars[0] = 0;
-    carEntity.ivars[1] = 0;
-    carEntity.ivars[2] = 0;
-    carEntity.ivars[3] = 0;
-    carEntity.ivars[4] = 0;
-    carEntity.ivars[5] = 0;
-    world.entities.push_back(carEntity);
+    Entity carEntity2(carEntity);
+    carEntity2.maxHealth = 40.0;
+    carEntity2.health = 40.0;
+    carEntity2.controller = ENTITY_CONTROLLER::AI_CAR;
+    carEntity2.ivars = new int[6];
+    carEntity2.ivars[0] = 0;
+    carEntity2.ivars[1] = 0;
+    carEntity2.ivars[2] = 0;
+    carEntity2.ivars[3] = 0;
+    carEntity2.ivars[4] = 0;
+    carEntity2.ivars[5] = 0;
+    world.entities.push_back(carEntity2);
 
     player = NULL;
+
+    Button testLabel = Button(0, 0, 0, 0, &TextureRect::types[TextureRect::HEART]);
+    testLabel.type = Button::HEALTH;
+    testLabel.text.push_back(Button::TextPos("LABEL_TEST", 20, 3));
+    ui.buttons.push_back(testLabel);
+
+    testLabel = Button(0, 16, 0, 0, &TextureRect::types[TextureRect::LIGHTNING]);
+    testLabel.type = Button::ABER_RECHARGE;
+    testLabel.text.push_back(Button::TextPos("LABEL_TEST", 20, 3));
+    ui.buttons.push_back(testLabel);
+
+    testLabel = Button(0, 32, 0, 0, &TextureRect::types[TextureRect::SCREWS]);
+    testLabel.type = Button::SCREWS;
+    testLabel.text.push_back(Button::TextPos("LABEL_TEST", 20, 3));
+    ui.buttons.push_back(testLabel);
 }
 
 void AtomicDrive::update() {
@@ -247,7 +298,6 @@ void AtomicDrive::update() {
                     e.y = 64;
                 }
                 if (e.ivars[Player::IS_BEING_DRIVEN]) {
-
                     float turning = 0;
                     if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)
                     ||  sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
@@ -277,19 +327,56 @@ void AtomicDrive::update() {
 
                     //std::cout << e.ivars[Player::ENGINE_SOUND_TICKS] << std::endl;
                     
-                    if (e.ivars[Player::ENGINE_SOUND_TICKS] <= 0) {
-                        e.ivars[Player::ENGINE_SOUND_TICKS] = 60;
+                    if (e.ivars[Player::ENGINE_SOUND_TICKS] <= 0 && !e.ivars[Player::IS_ABERRATING]) {
+                        e.ivars[Player::ENGINE_SOUND_TICKS] = 30;
                         //std::cout << (abs(acceleration.x) + abs(acceleration.y))*10 << "\n";
                         e.soundManager.playSound(soundManager.engine_1, (abs(acceleration.x) + abs(acceleration.y))*10, e.x, e.y);
                     }
                     e.ivars[Player::ENGINE_SOUND_TICKS]--;
                     
+                    if (e.ivars[Player::TICKS_UNTIL_ABERRATION] <= 0) {
+                        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
+                            AffectEntity(e, Effect(0, fps/2*e.ivars[Player::ABER_CORE_LEVEL], 
+                            Math::fRotateAroundOrigin(0, 16*6*e.ivars[Player::ABER_CORE_LEVEL], (e.rotation + 180)*Math::DEG_TO_RAD), true));
+                            //e.velocity += ;
+                            e.soundManager.playSound(SoundManager::aberration_1, 1.0/3.0*e.ivars[Player::ABER_CORE_LEVEL]);
+                            e.ivars[Player::TICKS_UNTIL_ABERRATION] = fps*10/e.ivars[Player::ABER_CORE_LEVEL];
+                        }
+                    }
+                    else {
+                        e.ivars[Player::TICKS_UNTIL_ABERRATION]--;
+                    }
+
+                    e.ivars[Player::IS_ABERRATING] = false;
                     calculateCarPhysics(e, turning, acceleration, goingBack, world);
+                    if (e.ivars[Player::IS_ABERRATING]) {
+                        e.sprite = &TextureRect::types[TextureRect::CAR_FRAME];
+                    }
+                    else {
+                        if (e.health < e.maxHealth/3) {
+                            e.sprite = &TextureRect::types[TextureRect::BLUE_CAR_BADLY_DAMAGED];
+                        }
+                        else if (e.health < (e.maxHealth/3)*2) {
+                            e.sprite = &TextureRect::types[TextureRect::BLUE_CAR_DAMAGED];
+                        }
+                        else {
+                            e.sprite = &TextureRect::types[TextureRect::BLUE_CAR_BASE];
+                        }
+                    }
                 }
 
                 break;
             }
             case (ENTITY_CONTROLLER::AI_CAR): {
+                if (e.health <= 0 && !e.isDead) {
+                    e.isDead = true;
+                    e.soundManager.playSound(SoundManager::explosion, 1.0, e.x, e.y);
+                    screwsOwned += 100;
+                    break;
+                }
+                if (e.isDead) {
+                    break;
+                }
                 //std::cout << e.x << " " << e.y << "\n";
                 float turning = 0;
                 sf::Vector2f acceleration = {0.0, 0.0};
@@ -327,7 +414,7 @@ void AtomicDrive::update() {
                     e.ivars[Enemy::TARGET_X] = player->x;
                     e.ivars[Enemy::TARGET_Y] = player->y;
 
-                    e.ivars[Enemy::IS_TARGETING] = 1;
+                    //e.ivars[Enemy::IS_TARGETING] = 1;
                     e.ivars[Enemy::TURNING_INTO_ANGLE] = -(atan2(e.x - player->x, e.y - player->y) * 180 / Math::PI);
                     //std::cout << e.x - player->x << " " << e.y - player->y << " " << e.x << " " << e.y << "\n";
                     //while (e.ivars[TURNING_INTO_ANGLE] >= 360) e.ivars[TURNING_INTO_ANGLE] -= 360;
@@ -344,6 +431,15 @@ void AtomicDrive::update() {
                 e.ivars[Enemy::ENGINE_SOUND_TICKS]--;
                 
                 calculateCarPhysics(e, turning, acceleration, false, world);
+                if (e.health < e.maxHealth/3) {
+                    e.sprite = &TextureRect::types[TextureRect::RED_CAR_BADLY_DAMAGED];
+                }
+                else if (e.health < (e.maxHealth/3)*2) {
+                    e.sprite = &TextureRect::types[TextureRect::RED_CAR_DAMAGED];
+                }
+                else {
+                    e.sprite = &TextureRect::types[TextureRect::RED_CAR_BASE];
+                }
                 break;
             }
             default:
@@ -360,8 +456,17 @@ void AtomicDrive::draw() {
     window.clear({0, 0, 0});
     worldBuffer.clear({0, 0, 0});
     world.draw(&worldBuffer, camera);
+    drawUI();
     worldBuffer.display();
     sf::Sprite s(worldBuffer.getTexture());
+    if (screenShakeFrames > 0) {
+        if (screenShakeFrames % 2 == 0) s.setPosition(screenShakeFrames*TextureRect::SCALE_FACTOR, 0);
+        else s.setPosition(-screenShakeFrames*TextureRect::SCALE_FACTOR, 0);
+        screenShakeFrames--;
+    }
+    else {
+        s.setPosition(0, 0);
+    }
     s.setScale(TextureRect::SCALE_FACTOR, TextureRect::SCALE_FACTOR);
     window.draw(s);
     window.display();
@@ -381,6 +486,41 @@ void AtomicDrive::pollEvents() {
                     break;
             }
         }
+        if (event.type == sf::Event::Resized) {
+            window.setView(sf::View(sf::FloatRect(0, 0, window.getSize().x, window.getSize().y)));
+            worldBuffer.create((int) ceil(window.getSize().x/TextureRect::SCALE_FACTOR/16)*16, (int) ceil(window.getSize().y/TextureRect::SCALE_FACTOR/16)*16);
+            std::cout << window.getSize().x << " " << window.getSize().y << " " << worldBuffer.getSize().x << " " << worldBuffer.getSize().y << "\n";
+        }
+    }
+}
+
+void AtomicDrive::updateUI() {
+    ui.update(window);
+    for (Button &b : ui.buttons) {
+        switch (b.type) {
+            case (Button::LABEL): {
+                break;
+            }
+            case (Button::HEALTH): {
+                b.text.at(0).text = std::to_string((int)player->health);
+                break;
+            }
+            case (Button::ABER_RECHARGE): {
+                if (player->controller == ENTITY_CONTROLLER::PLAYER_CAR) {
+                    b.visible = true;
+                    b.text.at(0).text = std::to_string((int)(100 - 100*(((float)player->ivars[Player::TICKS_UNTIL_ABERRATION])/(fps*10/player->ivars[Player::ABER_CORE_LEVEL]))));
+                }
+                else {
+                    b.visible = false;
+                }
+                break;
+            }
+            case (Button::SCREWS): {
+                b.text.at(0).text = std::to_string(screwsOwned);
+                break;
+            }
+            default: break;
+        }
     }
 }
 
@@ -389,6 +529,7 @@ int AtomicDrive::mainLoop() {
     while (running) {
         pollEvents();
         update();
+        updateUI();
         draw();
         running = window.isOpen();
     }

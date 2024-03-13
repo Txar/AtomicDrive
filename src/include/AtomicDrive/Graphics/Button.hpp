@@ -5,6 +5,13 @@
 
 class Button {
     public:
+    enum BUTTON_TYPE {
+        LABEL,
+        HEALTH,
+        AMMO,
+        SCREWS,
+        ABER_RECHARGE
+    };
 
     class TextPos {
         public:
@@ -17,11 +24,13 @@ class Button {
 
     static sf::Font font;
 
+    BUTTON_TYPE type;
+
     int x, y;
     int width, height;
     bool hasBeenClicked;
     bool visible;
-    bool drawTexture;
+    bool drawTexture = true;
     //sf::RenderTexture buffer;
     std::vector<TextPos> text;
     TextureRect *texture;
@@ -33,14 +42,21 @@ class Button {
             ||   mouseY < y);
     }
 
+    void click(int mouseX, int mouseY) {
+        hasBeenClicked = checkClick(mouseX, mouseY);
+    }
+
     void draw(sf::RenderTexture &r) {
-        texture->sprite.setPosition(x, y);
-        r.draw(texture->sprite);
+        if (drawTexture) {
+            texture->sprite.setPosition(x, y);
+            r.draw(texture->sprite);
+        }
         sf::Text t;
-        t.setCharacterSize(5);
+        t.setCharacterSize(8);
         for (TextPos &tp : text) {
             t.setFont(font);
-            t.setPosition(tp.x, tp.y);
+            t.setPosition(x + tp.x, y + tp.y);
+            t.setFillColor(sf::Color::White);
             t.setString(tp.text);
             r.draw(t);
         }
@@ -53,7 +69,13 @@ class Button {
         hasBeenClicked = false;
     };
 
+    Button(int x, int y, int width, int height) : x(x), y(y), width(width), height(height) {
+        visible = true;
+        drawTexture = false;
+        hasBeenClicked = false;
+    };
+
     static void initialize() {
-        font.loadFromFile("assets/Roboto-Regular.ttf");
+        font.loadFromFile("assets/Roboto-Bold.ttf");
     }
 };

@@ -22,6 +22,10 @@ class Entity {
         float rotation; //DEGREES!!
         float frictionCoefficient;
         float acceleration;
+        float maxHealth;
+        float health;
+
+        bool isDead = false;
         TextureRect *sprite;
         std::vector<Effect> effects;
         

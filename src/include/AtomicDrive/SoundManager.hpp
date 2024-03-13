@@ -20,6 +20,9 @@ class SoundManager {
 
         static sf::SoundBuffer car_crash;
         static sf::SoundBuffer engine_1;
+        static sf::SoundBuffer aberration_1;
+        static sf::SoundBuffer pickup;
+        static sf::SoundBuffer explosion;
 
         std::vector<volumeSound> soundQueue;
         sf::Sound sound;
@@ -27,6 +30,9 @@ class SoundManager {
         void initialize() {
             car_crash.loadFromFile("assets/car_crash.wav");
             engine_1.loadFromFile("assets/engine_1.wav");
+            aberration_1.loadFromFile("assets/aberration_1.wav");
+            pickup.loadFromFile("assets/pickup.wav");
+            explosion.loadFromFile("assets/explosion.wav");
         }
 
         void playSounds(int cameraCenterX, int cameraCenterY) {

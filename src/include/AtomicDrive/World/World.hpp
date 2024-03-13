@@ -13,6 +13,8 @@ class World {
         World();
         World(int width, int height);
 
+        int targetX = 0, targetY = 0;
+
         void update();
         void renderChunks();
         void draw(sf::RenderTexture *r, sf::Vector2i &camera);

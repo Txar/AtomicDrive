@@ -14,7 +14,9 @@ class Player {
         ABER_CORE_LEVEL,
         ENGINE_LEVEL,
         ENGINE_SOUND_TICKS,
-        IS_BEING_DRIVEN
+        IS_BEING_DRIVEN,
+        TICKS_UNTIL_ABERRATION,
+        IS_ABERRATING
     };
 
     enum PLAYER_CAR_FVARS {

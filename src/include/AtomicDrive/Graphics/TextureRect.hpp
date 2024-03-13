@@ -24,7 +24,18 @@ class TextureRect {
             ABER_CORE,
             ADVANCED_ABER_CORE,
             ENGINE_UPGRADE,
-            SAND_ROCK
+            SAND_ROCK,
+            HEART,
+            NUCLEAR_BEANS,
+            BEANS,
+            AMMO,
+            SCREWS,
+            LIGHTNING,
+            TARGET_ARROW,
+            BLUE_CAR_DAMAGED,
+            BLUE_CAR_BADLY_DAMAGED,
+            RED_CAR_DAMAGED,
+            RED_CAR_BADLY_DAMAGED
         };
 
         static void initializeTypes() {
@@ -40,7 +51,18 @@ class TextureRect {
                 TextureRect(192, 16, 32, 48),
                 TextureRect(224, 16, 32, 48),
                 TextureRect(256, 16, 32, 48),
-                TextureRect(208, 0, 16, 16)
+                TextureRect(208, 0, 16, 16),
+                TextureRect(64, 80, 16, 16),
+                TextureRect(48, 80, 16, 16),
+                TextureRect(32, 80, 16, 16),
+                TextureRect(16, 80, 16, 16),
+                TextureRect(0, 80, 16, 16),
+                TextureRect(80, 80, 16, 16),
+                TextureRect(96, 64, 16, 32),
+                TextureRect(128, 64, 32, 48),
+                TextureRect(128, 112, 32, 48),
+                TextureRect(160, 64, 32, 48),
+                TextureRect(160, 112, 32, 48)
             };
 
             types = new TextureRect[sizeof(t) / sizeof(TextureRect)];
